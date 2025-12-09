@@ -1,0 +1,91 @@
+# Верхний уровень конфигурации. Означает, что поиск конфигов выше по папкам прекращается.
+root = true
+
+# ----------------------------------------------
+# 1. ОБЩИЕ НАСТРОЙКИ (ВСЕ ФАЙЛЫ)
+# ----------------------------------------------
+[*]
+charset = utf-8
+indent_style = space
+indent_size = 4
+end_of_line = crlf
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[*.{json,xml,yml}]
+indent_size = 2
+
+# ----------------------------------------------
+# 2. НАСТРОЙКИ C# (ФОРМАТИРОВАНИЕ)
+# ----------------------------------------------
+[*.cs]
+# Сортировка using (System.* первыми)
+dotnet_sort_system_directives_first = true
+# Добавлять пустую строку между using и namespace
+dotnet_separate_import_directive_groups = false
+
+# Стиль скобок: Всегда с новой строки (стиль Allman, стандарт C#)
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+
+# Отступы для switch/case
+csharp_indent_case_contents = true
+csharp_indent_switch_labels = true
+
+# ----------------------------------------------
+# 3. СТИЛЬ КОДА (СИНТАКСИС)
+# ----------------------------------------------
+
+# Использовать 'var', когда тип очевиден (например: var s = "text";)
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+
+# Использовать современные возможности языка (Pattern matching)
+csharp_style_pattern_matching_over_is_with_cast_check = true:suggestion
+csharp_style_pattern_matching_over_as_with_null_check = true:suggestion
+
+# Предпочитать инициализаторы объектов ( new Person { Name = "X" } )
+dotnet_style_object_initializer = true:suggestion
+dotnet_style_collection_initializer = true:suggestion
+
+# ----------------------------------------------
+# 4. ПРАВИЛА ИМЕНОВАНИЯ (NAMING CONVENTIONS)
+# Это самая мощная часть. Visual Studio будет подсказывать, если имя неправильное.
+# ----------------------------------------------
+
+# --- Правило: Интерфейсы должны начинаться с 'I' (IRequest, IService) ---
+dotnet_naming_rule.interface_should_be_begins_with_i.severity = suggestion
+dotnet_naming_rule.interface_should_be_begins_with_i.symbols = interface_symbols
+dotnet_naming_rule.interface_should_be_begins_with_i.style = interface_style
+
+dotnet_naming_symbols.interface_symbols.applicable_kinds = interface
+dotnet_naming_symbols.interface_symbols.applicable_accessibilities = public, internal, private, protected, protected_internal, private_protected
+
+dotnet_naming_style.interface_style.required_prefix = I
+dotnet_naming_style.interface_style.capitalization = pascal_case
+
+# --- Правило: Асинхронные методы должны заканчиваться на 'Async' ---
+dotnet_naming_rule.async_methods_end_in_async.severity = suggestion
+dotnet_naming_rule.async_methods_end_in_async.symbols = async_methods
+dotnet_naming_rule.async_methods_end_in_async.style = async_methods_style
+
+dotnet_naming_symbols.async_methods.applicable_kinds = method
+dotnet_naming_symbols.async_methods.applicable_accessibilities = *
+dotnet_naming_symbols.async_methods.required_modifiers = async
+
+dotnet_naming_style.async_methods_style.required_suffix = Async
+dotnet_naming_style.async_methods_style.capitalization = pascal_case
+
+# --- Правило: Приватные поля должны начинаться с '_' (например: _userRepository) ---
+# Это современный стандарт .NET Core, позволяющий не писать 'this.'
+dotnet_naming_rule.private_fields_should_begin_with_underscore.severity = suggestion
+dotnet_naming_rule.private_fields_should_begin_with_underscore.symbols = private_fields
+dotnet_naming_rule.private_fields_should_begin_with_underscore.style = private_fields_style
+
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+
+dotnet_naming_style.private_fields_style.required_prefix = _
+dotnet_naming_style.private_fields_style.capitalization = camel_case

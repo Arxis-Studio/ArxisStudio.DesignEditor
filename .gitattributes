@@ -1,0 +1,28 @@
+# 1. АВТОМАТИЧЕСКАЯ НОРМАЛИЗАЦИЯ
+# Заставляет Git автоматически обрабатывать окончания строк.
+# В репозитории будет храниться LF, на Windows при скачивании будет CRLF.
+* text=auto
+
+# 2. СПЕЦИФИКА .NET ФАЙЛОВ
+# Файлы кода C# всегда обрабатываем как текст
+*.cs text diff=csharp
+*.xaml text
+*.json text
+*.config text
+
+# Файлы решений Visual Studio (.sln) лучше жестко закрепить за CRLF,
+# так как старые версии VS могут капризничать без этого.
+*.sln text eol=crlf
+
+# 3. БИНАРНЫЕ ФАЙЛЫ
+# Говорим Git не пытаться конвертировать окончания строк в этих файлах
+# и не пытаться показывать их текстовый diff.
+*.dll binary
+*.pdb binary
+*.exe binary
+*.users binary
+*.suo binary
+*.ico binary
+*.png binary
+*.jpg binary
+*.pdf binary
