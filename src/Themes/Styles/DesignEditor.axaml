@@ -1,0 +1,41 @@
+﻿<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:local="clr-namespace:ArxisStudio">
+
+    <Design.PreviewWith>
+        <Border Padding="20" Width="400" Height="300">
+            <local:DesignEditor>
+                <Rectangle Canvas.Left="50" Canvas.Top="50" Fill="Red" Width="50" Height="50"/>
+            </local:DesignEditor>
+        </Border>
+    </Design.PreviewWith>
+
+    <ControlTheme x:Key="{x:Type local:DesignEditor}"
+                  TargetType="local:DesignEditor">
+
+        <Setter Property="Background" Value="#1E1E1E" />
+
+        <Setter Property="ClipToBounds" Value="True" />
+
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Border Background="{TemplateBinding Background}"
+                        BorderBrush="{TemplateBinding BorderBrush}"
+                        BorderThickness="{TemplateBinding BorderThickness}"
+                        CornerRadius="{TemplateBinding CornerRadius}"
+                        Padding="{TemplateBinding Padding}">
+
+                    <Canvas Name="PART_Canvas"
+                            RenderTransform="{TemplateBinding ViewportTransform}"
+                            RenderTransformOrigin="0,0">
+
+                        <ContentPresenter Name="PART_ContentPresenter"
+                                          Content="{TemplateBinding Content}"
+                                          ContentTemplate="{TemplateBinding ContentTemplate}" />
+                    </Canvas>
+
+                </Border>
+            </ControlTemplate>
+        </Setter>
+    </ControlTheme>
+</ResourceDictionary>
