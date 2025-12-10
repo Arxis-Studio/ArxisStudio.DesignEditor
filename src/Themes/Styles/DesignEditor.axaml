@@ -1,21 +1,30 @@
 ﻿<ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:local="clr-namespace:ArxisStudio">
+                    xmlns:local="clr-namespace:ArxisStudio"
+                    xmlns:helpers="clr-namespace:ArxisStudio.Helpers">
 
-    <Design.PreviewWith>
-        <Border Padding="20" Width="400" Height="300">
-            <local:DesignEditor>
-                <Rectangle Canvas.Left="50" Canvas.Top="50" Fill="Red" Width="50" Height="50"/>
-            </local:DesignEditor>
-        </Border>
-    </Design.PreviewWith>
+    <helpers:UnscaleTransformConverter x:Key="UnscaleTransformConverter" />
+    <helpers:ScaleDoubleConverter x:Key="ScaleDoubleConverter" />
+    <helpers:ScalePointConverter x:Key="ScalePointConverter" />
+
+    <ControlTheme x:Key="SelectionRectangleStyle"
+                  TargetType="Rectangle">
+        <Setter Property="Stroke" Value="#1E90FF" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="Fill">
+            <Setter.Value>
+                <SolidColorBrush Opacity="0.1" Color="#1E90FF" />
+            </Setter.Value>
+        </Setter>
+        <Setter Property="IsHitTestVisible" Value="False"/>
+    </ControlTheme>
 
     <ControlTheme x:Key="{x:Type local:DesignEditor}"
                   TargetType="local:DesignEditor">
 
         <Setter Property="Background" Value="#1E1E1E" />
-
         <Setter Property="ClipToBounds" Value="True" />
+        <Setter Property="SelectionRectangleStyle" Value="{StaticResource SelectionRectangleStyle}" />
 
         <Setter Property="Template">
             <ControlTemplate>
@@ -32,6 +41,30 @@
                         <ContentPresenter Name="PART_ContentPresenter"
                                           Content="{TemplateBinding Content}"
                                           ContentTemplate="{TemplateBinding ContentTemplate}" />
+
+                        <Rectangle Theme="{TemplateBinding SelectionRectangleStyle}"
+                                   RenderTransform="{Binding ViewportTransform, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource UnscaleTransformConverter}}"
+                                   RenderTransformOrigin="0,0"
+                                   Canvas.Top="{Binding SelectedArea.Y, RelativeSource={RelativeSource TemplatedParent}}"
+                                   Canvas.Left="{Binding SelectedArea.X, RelativeSource={RelativeSource TemplatedParent}}"
+                                   IsVisible="{TemplateBinding IsSelecting}">
+                            <Rectangle.Width>
+                                <MultiBinding Converter="{StaticResource ScaleDoubleConverter}">
+                                    <Binding Path="SelectedArea.Width"
+                                             RelativeSource="{RelativeSource TemplatedParent}" />
+                                    <Binding Path="ViewportZoom"
+                                             RelativeSource="{RelativeSource TemplatedParent}" />
+                                </MultiBinding>
+                            </Rectangle.Width>
+                            <Rectangle.Height>
+                                <MultiBinding Converter="{StaticResource ScaleDoubleConverter}">
+                                    <Binding Path="SelectedArea.Height"
+                                             RelativeSource="{RelativeSource TemplatedParent}" />
+                                    <Binding Path="ViewportZoom"
+                                             RelativeSource="{RelativeSource TemplatedParent}" />
+                                </MultiBinding>
+                            </Rectangle.Height>
+                        </Rectangle>
                     </Canvas>
 
                 </Border>

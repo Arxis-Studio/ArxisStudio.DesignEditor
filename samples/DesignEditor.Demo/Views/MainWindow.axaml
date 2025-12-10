@@ -72,7 +72,7 @@
         <arxisStudio:DesignEditor x:Name="Editor"
                                  Background="{StaticResource DesignEditorGridBrush}">
 
-            <Canvas Width="10000" Height="10000">
+            <Canvas >
 
                 <Border Canvas.Left="400" Canvas.Top="300"
                         Width="340"
