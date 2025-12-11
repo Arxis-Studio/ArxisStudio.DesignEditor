@@ -18,6 +18,14 @@ public class DesignEditor : SelectingItemsControl
     #endregion
 
     #region Re-exposed Properties
+
+    // --- ИСПРАВЛЕНИЕ: Открываем доступ к Selection для состояний ---
+    public new ISelectionModel Selection
+    {
+        get => base.Selection;
+        set => base.Selection = value;
+    }
+
     public new static readonly DirectProperty<DesignEditor, IList?> SelectedItemsProperty =
         AvaloniaProperty.RegisterDirect<DesignEditor, IList?>(nameof(SelectedItems), o => o.SelectedItems, (o, v) => o.SelectedItems = v);
 
@@ -47,7 +55,6 @@ public class DesignEditor : SelectingItemsControl
     public static readonly DirectProperty<DesignEditor, bool> IsSelectingProperty = AvaloniaProperty.RegisterDirect<DesignEditor, bool>(nameof(IsSelecting), o => o.IsSelecting);
     public static readonly DirectProperty<DesignEditor, Rect> SelectedAreaProperty = AvaloniaProperty.RegisterDirect<DesignEditor, Rect>(nameof(SelectedArea), o => o.SelectedArea);
 
-    // Новое свойство: Границы контента (приходит от DesignPanel)
     public static readonly DirectProperty<DesignEditor, Rect> ItemsExtentProperty = AvaloniaProperty.RegisterDirect<DesignEditor, Rect>(nameof(ItemsExtent), o => o.ItemsExtent);
     #endregion
 
@@ -84,8 +91,10 @@ public class DesignEditor : SelectingItemsControl
         ViewportLocationProperty.Changed.AddClassHandler<DesignEditor>((x, e) => x.UpdateTransforms());
         ViewportZoomProperty.Changed.AddClassHandler<DesignEditor>((x, e) => x.UpdateTransforms());
 
-        // Мы НЕ устанавливаем ItemsPanelProperty.OverrideDefaultValue,
-        // потому что будем задавать шаблон в XAML для биндинга Extent.
+        // Подписка на события перемещения элементов
+        DesignEditorItem.DragStartedEvent.AddClassHandler<DesignEditor>((x, e) => x.OnItemsDragStarted(e));
+        DesignEditorItem.DragDeltaEvent.AddClassHandler<DesignEditor>((x, e) => x.OnItemsDragDelta(e));
+        DesignEditorItem.DragCompletedEvent.AddClassHandler<DesignEditor>((x, e) => x.OnItemsDragCompleted(e));
     }
 
     public DesignEditor()
@@ -157,12 +166,49 @@ public class DesignEditor : SelectingItemsControl
     private Point GetWorldPosition(Point screenPoint)
         => (screenPoint / ViewportZoom) + ViewportLocation;
 
+    // --- Drag & Drop Logic ---
+
+    private void OnItemsDragStarted(DragStartedEventArgs e)
+    {
+        e.Handled = true;
+    }
+
+    private void OnItemsDragDelta(DragDeltaEventArgs e)
+    {
+        if (_isPanning || IsSelecting) return;
+
+        var items = SelectedItems;
+        if (items == null || items.Count == 0) return;
+
+        var delta = new Vector(e.HorizontalChange, e.VerticalChange);
+
+        foreach (var item in items)
+        {
+            var container = ContainerFromItem(item) as DesignEditorItem;
+            if (container == null && item is DesignEditorItem directItem)
+                container = directItem;
+
+            if (container != null && container.IsDraggable)
+            {
+                container.Location += delta;
+            }
+        }
+        e.Handled = true;
+    }
+
+    private void OnItemsDragCompleted(DragCompletedEventArgs e)
+    {
+        e.Handled = true;
+    }
+
     // --- Input Handling ---
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
         if (e.Handled) return;
         double prevZoom = ViewportZoom;
         double newZoom = e.Delta.Y > 0 ? prevZoom * ZoomFactor : prevZoom / ZoomFactor;
+
+        // Исправление для .NET Standard 2.0 (Math.Clamp недоступен)
         newZoom = Math.Max(GetValue(MinZoomProperty), Math.Min(GetValue(MaxZoomProperty), newZoom));
 
         if (Math.Abs(newZoom - prevZoom) > ZoomTolerance)
@@ -199,7 +245,10 @@ public class DesignEditor : SelectingItemsControl
             if (!e.KeyModifiers.HasFlag(KeyModifiers.Control)) SelectedItem = null;
             IsSelecting = true;
             _selectionStartLocationWorld = GetWorldPosition(e.GetPosition(this));
+
+            // Исправление Size.Empty для Avalonia
             SelectedArea = new Rect(_selectionStartLocationWorld, new Size(0, 0));
+
             e.Pointer.Capture(this);
             e.Handled = true;
         }
@@ -261,7 +310,7 @@ public class DesignEditor : SelectingItemsControl
             {
                 if (child is DesignEditorItem container)
                 {
-                    if (bounds.Intersects(container.Bounds))
+                    if (bounds.Intersects(new Rect(container.Location, container.Bounds.Size)))
                         Selection.Select(IndexFromContainer(container));
                 }
             }
