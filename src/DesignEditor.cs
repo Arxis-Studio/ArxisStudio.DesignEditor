@@ -1,6 +1,10 @@
-﻿
+﻿using System.Collections;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Mixins;
+using Avalonia.Controls.Primitives;
+using Avalonia.Controls.Selection;
+using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Styling;
@@ -9,20 +13,61 @@ using Avalonia.VisualTree;
 namespace ArxisStudio;
 
 /// <summary>
-/// Визуальный редактор (Infinite Canvas).
-/// Поддерживает: Zoom, Pan, DPI-сетку, Rubberband Selection.
+/// Контейнер для элемента.
 /// </summary>
-public class DesignEditor : ContentControl
+public class DesignEditorItem : ContentControl, ISelectable
+{
+    public static readonly StyledProperty<bool> IsSelectedProperty =
+        AvaloniaProperty.Register<DesignEditorItem, bool>(nameof(IsSelected));
+
+    public bool IsSelected
+    {
+        get => GetValue(IsSelectedProperty);
+        set => SetValue(IsSelectedProperty, value);
+    }
+
+    static DesignEditorItem()
+    {
+        SelectableMixin.Attach<DesignEditorItem>(IsSelectedProperty);
+        FocusableProperty.OverrideDefaultValue<DesignEditorItem>(true);
+    }
+}
+
+/// <summary>
+/// Редактор с поддержкой Infinite Canvas и MVVM.
+/// </summary>
+public class DesignEditor : SelectingItemsControl
 {
     #region Constants
-
     private const double ZoomFactor = 1.1;
     private const double ZoomTolerance = 0.0001;
+    #endregion
+
+    #region Re-exposed Properties (Исправление SelectionMode и SelectedItems)
+
+    // 1. Открываем SelectedItems для биндинга
+    public new static readonly DirectProperty<DesignEditor, IList?> SelectedItemsProperty =
+        AvaloniaProperty.RegisterDirect<DesignEditor, IList?>(
+            nameof(SelectedItems),
+            o => o.SelectedItems,
+            (o, v) => o.SelectedItems = v);
+
+    public new IList? SelectedItems
+    {
+        get => base.SelectedItems;
+        set => base.SelectedItems = value;
+    }
+
+    // 2. Открываем SelectionMode
+    public new SelectionMode SelectionMode
+    {
+        get => base.SelectionMode;
+        set => base.SelectionMode = value;
+    }
 
     #endregion
 
-    #region Dependency Properties: Viewport
-
+    #region Dependency Properties
     public static readonly StyledProperty<Point> ViewportLocationProperty =
         AvaloniaProperty.Register<DesignEditor, Point>(nameof(ViewportLocation));
 
@@ -35,10 +80,6 @@ public class DesignEditor : ContentControl
     public static readonly StyledProperty<double> MaxZoomProperty =
         AvaloniaProperty.Register<DesignEditor, double>(nameof(MaxZoom), 5.0);
 
-    #endregion
-
-    #region Dependency Properties: Transforms & Styles
-
     public static readonly StyledProperty<Transform> ViewportTransformProperty =
         AvaloniaProperty.Register<DesignEditor, Transform>(nameof(ViewportTransform), new TransformGroup());
 
@@ -48,86 +89,30 @@ public class DesignEditor : ContentControl
     public static readonly StyledProperty<ControlTheme> SelectionRectangleStyleProperty =
         AvaloniaProperty.Register<DesignEditor, ControlTheme>(nameof(SelectionRectangleStyle));
 
-    #endregion
-
-    #region Dependency Properties: Selection State
-
     public static readonly DirectProperty<DesignEditor, bool> IsSelectingProperty =
         AvaloniaProperty.RegisterDirect<DesignEditor, bool>(nameof(IsSelecting), o => o.IsSelecting);
 
     public static readonly DirectProperty<DesignEditor, Rect> SelectedAreaProperty =
         AvaloniaProperty.RegisterDirect<DesignEditor, Rect>(nameof(SelectedArea), o => o.SelectedArea);
-
     #endregion
 
-    #region Property Wrappers
-
-    public Point ViewportLocation
-    {
-        get => GetValue(ViewportLocationProperty);
-        set => SetValue(ViewportLocationProperty, value);
-    }
-
-    public double ViewportZoom
-    {
-        get => GetValue(ViewportZoomProperty);
-        set => SetValue(ViewportZoomProperty, value);
-    }
-
-    public double MinZoom
-    {
-        get => GetValue(MinZoomProperty);
-        set => SetValue(MinZoomProperty, value);
-    }
-
-    public double MaxZoom
-    {
-        get => GetValue(MaxZoomProperty);
-        set => SetValue(MaxZoomProperty, value);
-    }
-
-    public Transform ViewportTransform
-    {
-        get => GetValue(ViewportTransformProperty);
-        set => SetValue(ViewportTransformProperty, value);
-    }
-
-    public Transform DpiScaledViewportTransform
-    {
-        get => GetValue(DpiScaledViewportTransformProperty);
-        set => SetValue(DpiScaledViewportTransformProperty, value);
-    }
-
-    public ControlTheme SelectionRectangleStyle
-    {
-        get => GetValue(SelectionRectangleStyleProperty);
-        set => SetValue(SelectionRectangleStyleProperty, value);
-    }
+    #region Wrappers
+    public Point ViewportLocation { get => GetValue(ViewportLocationProperty); set => SetValue(ViewportLocationProperty, value); }
+    public double ViewportZoom { get => GetValue(ViewportZoomProperty); set => SetValue(ViewportZoomProperty, value); }
+    public double MinZoom { get => GetValue(MinZoomProperty); set => SetValue(MinZoomProperty, value); }
+    public double MaxZoom { get => GetValue(MaxZoomProperty); set => SetValue(MaxZoomProperty, value); }
+    public Transform ViewportTransform { get => GetValue(ViewportTransformProperty); set => SetValue(ViewportTransformProperty, value); }
+    public Transform DpiScaledViewportTransform { get => GetValue(DpiScaledViewportTransformProperty); set => SetValue(DpiScaledViewportTransformProperty, value); }
+    public ControlTheme SelectionRectangleStyle { get => GetValue(SelectionRectangleStyleProperty); set => SetValue(SelectionRectangleStyleProperty, value); }
 
     private bool _isSelecting;
-    /// <summary>
-    /// Показывает, активно ли сейчас выделение рамкой.
-    /// </summary>
-    public bool IsSelecting
-    {
-        get => _isSelecting;
-        private set => SetAndRaise(IsSelectingProperty, ref _isSelecting, value);
-    }
+    public bool IsSelecting { get => _isSelecting; private set => SetAndRaise(IsSelectingProperty, ref _isSelecting, value); }
 
     private Rect _selectedArea;
-    /// <summary>
-    /// Координаты текущей рамки выделения (в мировых координатах).
-    /// </summary>
-    public Rect SelectedArea
-    {
-        get => _selectedArea;
-        private set => SetAndRaise(SelectedAreaProperty, ref _selectedArea, value);
-    }
-
+    public Rect SelectedArea { get => _selectedArea; private set => SetAndRaise(SelectedAreaProperty, ref _selectedArea, value); }
     #endregion
 
-    #region Internal Transforms & State
-
+    #region Internal State
     private readonly TranslateTransform _translateTransform = new TranslateTransform();
     private readonly ScaleTransform _scaleTransform = new ScaleTransform();
     private readonly TranslateTransform _dpiTranslateTransform = new TranslateTransform();
@@ -136,57 +121,60 @@ public class DesignEditor : ContentControl
     private Point _panStartMousePosition;
     private Point _panStartViewportLocation;
     private Point _selectionStartLocationWorld;
-
     #endregion
-
-    #region Lifecycle
 
     static DesignEditor()
     {
         FocusableProperty.OverrideDefaultValue<DesignEditor>(true);
-
         ViewportLocationProperty.Changed.AddClassHandler<DesignEditor>((x, e) => x.UpdateTransforms());
         ViewportZoomProperty.Changed.AddClassHandler<DesignEditor>((x, e) => x.UpdateTransforms());
+
+        ItemsPanelProperty.OverrideDefaultValue<DesignEditor>(
+            new FuncTemplate<Panel?>(() => new Canvas()));
     }
 
     public DesignEditor()
     {
+        // По умолчанию включаем множественное выделение
+        SelectionMode = SelectionMode.Multiple;
+
         var contentGroup = new TransformGroup();
         contentGroup.Children.Add(_scaleTransform);
         contentGroup.Children.Add(_translateTransform);
-        ViewportTransform = contentGroup;
+        SetCurrentValue(ViewportTransformProperty, contentGroup);
 
         var dpiGroup = new TransformGroup();
         dpiGroup.Children.Add(_scaleTransform);
         dpiGroup.Children.Add(_dpiTranslateTransform);
-        DpiScaledViewportTransform = dpiGroup;
+        SetCurrentValue(DpiScaledViewportTransformProperty, dpiGroup);
     }
 
+    // --- Container Logic ---
+    protected override bool NeedsContainerOverride(object? item, int index, out object? recycleKey)
+    {
+        return NeedsContainer<DesignEditorItem>(item, out recycleKey);
+    }
+
+    protected override Control CreateContainerForItemOverride(object? item, int index, object? recycleKey)
+    {
+        return new DesignEditorItem();
+    }
+
+    // --- Lifecycle ---
     protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        // Подписка на изменение DPI для корректного Snapping сетки
-        if (e.Root is TopLevel topLevel)
-        {
-            topLevel.ScalingChanged += OnScreenScalingChanged;
-        }
+        if (e.Root is TopLevel topLevel) topLevel.ScalingChanged += OnScreenScalingChanged;
         UpdateTransforms();
     }
 
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
-        if (e.Root is TopLevel topLevel)
-        {
-            topLevel.ScalingChanged -= OnScreenScalingChanged;
-        }
+        if (e.Root is TopLevel topLevel) topLevel.ScalingChanged -= OnScreenScalingChanged;
     }
 
     private void OnScreenScalingChanged(object? sender, EventArgs e) => UpdateTransforms();
-
-    #endregion
-
-    #region Core Logic
 
     private void UpdateTransforms()
     {
@@ -205,88 +193,64 @@ public class DesignEditor : ContentControl
         _dpiTranslateTransform.X = Math.Round(x * renderScaling) / renderScaling;
         _dpiTranslateTransform.Y = Math.Round(y * renderScaling) / renderScaling;
 
-        // Важно пересоздавать группы для триггера обновления в UI
-        var viewportGroup = new TransformGroup();
-        viewportGroup.Children.Add(_scaleTransform);
-        viewportGroup.Children.Add(_translateTransform);
-        SetCurrentValue(ViewportTransformProperty, viewportGroup);
+        var vg = new TransformGroup(); vg.Children.Add(_scaleTransform); vg.Children.Add(_translateTransform);
+        SetCurrentValue(ViewportTransformProperty, vg);
 
-        var dpiGroup = new TransformGroup();
-        dpiGroup.Children.Add(_scaleTransform);
-        dpiGroup.Children.Add(_dpiTranslateTransform);
-        SetCurrentValue(DpiScaledViewportTransformProperty, dpiGroup);
+        var dg = new TransformGroup(); dg.Children.Add(_scaleTransform); dg.Children.Add(_dpiTranslateTransform);
+        SetCurrentValue(DpiScaledViewportTransformProperty, dg);
     }
 
     private Point GetWorldPosition(Point screenPoint)
-    {
-        // World = (Screen / Zoom) + Offset
-        return (screenPoint / ViewportZoom) + ViewportLocation;
-    }
+        => (screenPoint / ViewportZoom) + ViewportLocation;
 
-    #endregion
-
-    #region Input Handling
-
+    // --- Input Handling ---
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
         if (e.Handled) return;
 
         double prevZoom = ViewportZoom;
         double newZoom = e.Delta.Y > 0 ? prevZoom * ZoomFactor : prevZoom / ZoomFactor;
-
-        // .NET Standard 2.0 compatible clamp
-        newZoom = Math.Max(MinZoom, Math.Min(MaxZoom, newZoom));
+        newZoom = Math.Max(GetValue(MinZoomProperty), Math.Min(GetValue(MaxZoomProperty), newZoom));
 
         if (Math.Abs(newZoom - prevZoom) > ZoomTolerance)
         {
             Point mousePos = e.GetPosition(this);
             Vector correction = (Vector)mousePos / prevZoom - (Vector)mousePos / newZoom;
-
             ViewportZoom = newZoom;
             ViewportLocation += correction;
         }
-
         e.Handled = true;
     }
 
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         var props = e.GetCurrentPoint(this).Properties;
+        var source = e.Source as Visual;
+        var itemContainer = source?.FindAncestorOfType<DesignEditorItem>();
 
-        // 1. Проверяем, кликнули ли мы по интерактивному элементу внутри (кнопка, текстбокс)
-        if (!e.KeyModifiers.HasFlag(KeyModifiers.Alt) && !props.IsMiddleButtonPressed)
-        {
-            if (e.Source is Control source)
-            {
-                // Если элемент не является частью шаблона редактора (как Canvas или Border),
-                // то это контент пользователя.
-                if (source.TemplatedParent != this && source != this)
-                {
-                    base.OnPointerPressed(e);
-                    return;
-                }
-            }
-        }
-
-        // 2. Pan (Панорамирование): СКМ или Alt+ЛКМ
         if (props.IsMiddleButtonPressed || (props.IsLeftButtonPressed && e.KeyModifiers.HasFlag(KeyModifiers.Alt)))
         {
             _isPanning = true;
             _panStartMousePosition = e.GetPosition(this);
             _panStartViewportLocation = ViewportLocation;
-
             e.Pointer.Capture(this);
             Cursor = new Cursor(StandardCursorType.Hand);
             e.Handled = true;
         }
-        // 3. Selection (Выделение): ЛКМ
+        else if (props.IsLeftButtonPressed && itemContainer != null)
+        {
+            base.OnPointerPressed(e);
+        }
         else if (props.IsLeftButtonPressed)
         {
+            // Если Ctrl не нажат - сбрасываем выделение при клике в пустоту
+            if (!e.KeyModifiers.HasFlag(KeyModifiers.Control))
+            {
+                SelectedItem = null;
+            }
+
             IsSelecting = true;
-
             _selectionStartLocationWorld = GetWorldPosition(e.GetPosition(this));
-
-            // Начинаем с нулевого размера
             SelectedArea = new Rect(_selectionStartLocationWorld, new Size(0, 0));
 
             e.Pointer.Capture(this);
@@ -308,8 +272,6 @@ public class DesignEditor : ContentControl
         else if (IsSelecting)
         {
             Point currentMousePosWorld = GetWorldPosition(e.GetPosition(this));
-
-            // Логика разнонаправленного выделения (влево-вправо, вверх-вниз)
             double x = Math.Min(_selectionStartLocationWorld.X, currentMousePosWorld.X);
             double y = Math.Min(_selectionStartLocationWorld.Y, currentMousePosWorld.Y);
             double w = Math.Abs(_selectionStartLocationWorld.X - currentMousePosWorld.X);
@@ -333,16 +295,47 @@ public class DesignEditor : ContentControl
         }
         else if (IsSelecting)
         {
-            IsSelecting = false; // Скрываем рамку
-            SelectedArea = new Rect(0, 0, 0, 0); // Сбрасываем координаты
+            // Фиксация выделения
+            CommitSelection(SelectedArea, e.KeyModifiers.HasFlag(KeyModifiers.Control));
 
+            IsSelecting = false;
+            SelectedArea = new Rect(0, 0, 0, 0);
             e.Pointer.Capture(null);
-
-            // TODO: Здесь можно добавить логику "SelectItemsInArea(SelectedArea)"
         }
 
         base.OnPointerReleased(e);
     }
 
-    #endregion
+    /// <summary>
+    /// Главная логика выделения рамкой
+    /// </summary>
+    private void CommitSelection(Rect bounds, bool isCtrlPressed)
+    {
+        if (Presenter?.Panel == null) return;
+
+        // Используем BatchUpdate, чтобы не дергать события CollectionChanged на каждый элемент.
+        // Это позволяет корректно выделить несколько элементов сразу.
+        using (Selection.BatchUpdate())
+        {
+            // 1. Если не держим Ctrl, сначала очищаем всё
+            if (!isCtrlPressed)
+            {
+                Selection.Clear();
+            }
+
+            // 2. Ищем, кто попал в рамку
+            foreach (var child in Presenter.Panel.Children)
+            {
+                if (child is DesignEditorItem container)
+                {
+                    // Intersects проверяет, пересекаются ли прямоугольники
+                    if (bounds.Intersects(container.Bounds))
+                    {
+                        var index = IndexFromContainer(container);
+                        Selection.Select(index);
+                    }
+                }
+            }
+        }
+    }
 }

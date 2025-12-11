@@ -5,10 +5,8 @@
 
     <helpers:UnscaleTransformConverter x:Key="UnscaleTransformConverter" />
     <helpers:ScaleDoubleConverter x:Key="ScaleDoubleConverter" />
-    <helpers:ScalePointConverter x:Key="ScalePointConverter" />
 
-    <ControlTheme x:Key="SelectionRectangleStyle"
-                  TargetType="Rectangle">
+    <ControlTheme x:Key="SelectionRectangleStyle" TargetType="Rectangle">
         <Setter Property="Stroke" Value="#1E90FF" />
         <Setter Property="StrokeThickness" Value="1" />
         <Setter Property="Fill">
@@ -19,9 +17,28 @@
         <Setter Property="IsHitTestVisible" Value="False"/>
     </ControlTheme>
 
-    <ControlTheme x:Key="{x:Type local:DesignEditor}"
-                  TargetType="local:DesignEditor">
+    <ControlTheme x:Key="{x:Type local:DesignEditorItem}" TargetType="local:DesignEditorItem">
+        <Setter Property="Template">
+            <ControlTemplate>
+                <Grid>
+                    <Border Name="SelectionBorder"
+                            BorderBrush="#1E90FF"
+                            BorderThickness="2"
+                            CornerRadius="4"
+                            IsVisible="False"
+                            Margin="-4"/> <ContentPresenter Name="PART_ContentPresenter"
+                                      Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}" />
+                </Grid>
+            </ControlTemplate>
+        </Setter>
 
+        <Style Selector="^:selected /template/ Border#SelectionBorder">
+            <Setter Property="IsVisible" Value="True"/>
+        </Style>
+    </ControlTheme>
+
+    <ControlTheme x:Key="{x:Type local:DesignEditor}" TargetType="local:DesignEditor">
         <Setter Property="Background" Value="#1E1E1E" />
         <Setter Property="ClipToBounds" Value="True" />
         <Setter Property="SelectionRectangleStyle" Value="{StaticResource SelectionRectangleStyle}" />
@@ -30,17 +47,19 @@
             <ControlTemplate>
                 <Border Background="{TemplateBinding Background}"
                         BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}"
-                        CornerRadius="{TemplateBinding CornerRadius}"
-                        Padding="{TemplateBinding Padding}">
+                        BorderThickness="{TemplateBinding BorderThickness}">
 
-                    <Canvas Name="PART_Canvas"
+                    <Canvas Name="PART_ViewportCanvas"
                             RenderTransform="{TemplateBinding ViewportTransform}"
                             RenderTransformOrigin="0,0">
 
-                        <ContentPresenter Name="PART_ContentPresenter"
-                                          Content="{TemplateBinding Content}"
-                                          ContentTemplate="{TemplateBinding ContentTemplate}" />
+                        <ItemsPresenter Name="PART_ItemsPresenter">
+                            <ItemsPresenter.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <Canvas />
+                                </ItemsPanelTemplate>
+                            </ItemsPresenter.ItemsPanel>
+                        </ItemsPresenter>
 
                         <Rectangle Theme="{TemplateBinding SelectionRectangleStyle}"
                                    RenderTransform="{Binding ViewportTransform, RelativeSource={RelativeSource TemplatedParent}, Converter={StaticResource UnscaleTransformConverter}}"
@@ -50,23 +69,19 @@
                                    IsVisible="{TemplateBinding IsSelecting}">
                             <Rectangle.Width>
                                 <MultiBinding Converter="{StaticResource ScaleDoubleConverter}">
-                                    <Binding Path="SelectedArea.Width"
-                                             RelativeSource="{RelativeSource TemplatedParent}" />
-                                    <Binding Path="ViewportZoom"
-                                             RelativeSource="{RelativeSource TemplatedParent}" />
+                                    <Binding Path="SelectedArea.Width" RelativeSource="{RelativeSource TemplatedParent}" />
+                                    <Binding Path="ViewportZoom" RelativeSource="{RelativeSource TemplatedParent}" />
                                 </MultiBinding>
                             </Rectangle.Width>
                             <Rectangle.Height>
                                 <MultiBinding Converter="{StaticResource ScaleDoubleConverter}">
-                                    <Binding Path="SelectedArea.Height"
-                                             RelativeSource="{RelativeSource TemplatedParent}" />
-                                    <Binding Path="ViewportZoom"
-                                             RelativeSource="{RelativeSource TemplatedParent}" />
+                                    <Binding Path="SelectedArea.Height" RelativeSource="{RelativeSource TemplatedParent}" />
+                                    <Binding Path="ViewportZoom" RelativeSource="{RelativeSource TemplatedParent}" />
                                 </MultiBinding>
                             </Rectangle.Height>
                         </Rectangle>
-                    </Canvas>
 
+                    </Canvas>
                 </Border>
             </ControlTemplate>
         </Setter>
