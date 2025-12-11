@@ -1,10 +1,8 @@
 ﻿using System.Collections;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Mixins;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Selection;
-using Avalonia.Controls.Templates;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Styling;
@@ -12,30 +10,6 @@ using Avalonia.VisualTree;
 
 namespace ArxisStudio;
 
-/// <summary>
-/// Контейнер для элемента.
-/// </summary>
-public class DesignEditorItem : ContentControl, ISelectable
-{
-    public static readonly StyledProperty<bool> IsSelectedProperty =
-        AvaloniaProperty.Register<DesignEditorItem, bool>(nameof(IsSelected));
-
-    public bool IsSelected
-    {
-        get => GetValue(IsSelectedProperty);
-        set => SetValue(IsSelectedProperty, value);
-    }
-
-    static DesignEditorItem()
-    {
-        SelectableMixin.Attach<DesignEditorItem>(IsSelectedProperty);
-        FocusableProperty.OverrideDefaultValue<DesignEditorItem>(true);
-    }
-}
-
-/// <summary>
-/// Редактор с поддержкой Infinite Canvas и MVVM.
-/// </summary>
 public class DesignEditor : SelectingItemsControl
 {
     #region Constants
@@ -43,14 +17,9 @@ public class DesignEditor : SelectingItemsControl
     private const double ZoomTolerance = 0.0001;
     #endregion
 
-    #region Re-exposed Properties (Исправление SelectionMode и SelectedItems)
-
-    // 1. Открываем SelectedItems для биндинга
+    #region Re-exposed Properties
     public new static readonly DirectProperty<DesignEditor, IList?> SelectedItemsProperty =
-        AvaloniaProperty.RegisterDirect<DesignEditor, IList?>(
-            nameof(SelectedItems),
-            o => o.SelectedItems,
-            (o, v) => o.SelectedItems = v);
+        AvaloniaProperty.RegisterDirect<DesignEditor, IList?>(nameof(SelectedItems), o => o.SelectedItems, (o, v) => o.SelectedItems = v);
 
     public new IList? SelectedItems
     {
@@ -58,42 +27,28 @@ public class DesignEditor : SelectingItemsControl
         set => base.SelectedItems = value;
     }
 
-    // 2. Открываем SelectionMode
     public new SelectionMode SelectionMode
     {
         get => base.SelectionMode;
         set => base.SelectionMode = value;
     }
-
     #endregion
 
     #region Dependency Properties
-    public static readonly StyledProperty<Point> ViewportLocationProperty =
-        AvaloniaProperty.Register<DesignEditor, Point>(nameof(ViewportLocation));
+    public static readonly StyledProperty<Point> ViewportLocationProperty = AvaloniaProperty.Register<DesignEditor, Point>(nameof(ViewportLocation));
+    public static readonly StyledProperty<double> ViewportZoomProperty = AvaloniaProperty.Register<DesignEditor, double>(nameof(ViewportZoom), 1.0);
+    public static readonly StyledProperty<double> MinZoomProperty = AvaloniaProperty.Register<DesignEditor, double>(nameof(MinZoom), 0.1);
+    public static readonly StyledProperty<double> MaxZoomProperty = AvaloniaProperty.Register<DesignEditor, double>(nameof(MaxZoom), 5.0);
 
-    public static readonly StyledProperty<double> ViewportZoomProperty =
-        AvaloniaProperty.Register<DesignEditor, double>(nameof(ViewportZoom), 1.0);
+    public static readonly StyledProperty<Transform> ViewportTransformProperty = AvaloniaProperty.Register<DesignEditor, Transform>(nameof(ViewportTransform), new TransformGroup());
+    public static readonly StyledProperty<Transform> DpiScaledViewportTransformProperty = AvaloniaProperty.Register<DesignEditor, Transform>(nameof(DpiScaledViewportTransform), new TransformGroup());
 
-    public static readonly StyledProperty<double> MinZoomProperty =
-        AvaloniaProperty.Register<DesignEditor, double>(nameof(MinZoom), 0.1);
+    public static readonly StyledProperty<ControlTheme> SelectionRectangleStyleProperty = AvaloniaProperty.Register<DesignEditor, ControlTheme>(nameof(SelectionRectangleStyle));
+    public static readonly DirectProperty<DesignEditor, bool> IsSelectingProperty = AvaloniaProperty.RegisterDirect<DesignEditor, bool>(nameof(IsSelecting), o => o.IsSelecting);
+    public static readonly DirectProperty<DesignEditor, Rect> SelectedAreaProperty = AvaloniaProperty.RegisterDirect<DesignEditor, Rect>(nameof(SelectedArea), o => o.SelectedArea);
 
-    public static readonly StyledProperty<double> MaxZoomProperty =
-        AvaloniaProperty.Register<DesignEditor, double>(nameof(MaxZoom), 5.0);
-
-    public static readonly StyledProperty<Transform> ViewportTransformProperty =
-        AvaloniaProperty.Register<DesignEditor, Transform>(nameof(ViewportTransform), new TransformGroup());
-
-    public static readonly StyledProperty<Transform> DpiScaledViewportTransformProperty =
-        AvaloniaProperty.Register<DesignEditor, Transform>(nameof(DpiScaledViewportTransform), new TransformGroup());
-
-    public static readonly StyledProperty<ControlTheme> SelectionRectangleStyleProperty =
-        AvaloniaProperty.Register<DesignEditor, ControlTheme>(nameof(SelectionRectangleStyle));
-
-    public static readonly DirectProperty<DesignEditor, bool> IsSelectingProperty =
-        AvaloniaProperty.RegisterDirect<DesignEditor, bool>(nameof(IsSelecting), o => o.IsSelecting);
-
-    public static readonly DirectProperty<DesignEditor, Rect> SelectedAreaProperty =
-        AvaloniaProperty.RegisterDirect<DesignEditor, Rect>(nameof(SelectedArea), o => o.SelectedArea);
+    // Новое свойство: Границы контента (приходит от DesignPanel)
+    public static readonly DirectProperty<DesignEditor, Rect> ItemsExtentProperty = AvaloniaProperty.RegisterDirect<DesignEditor, Rect>(nameof(ItemsExtent), o => o.ItemsExtent);
     #endregion
 
     #region Wrappers
@@ -107,16 +62,16 @@ public class DesignEditor : SelectingItemsControl
 
     private bool _isSelecting;
     public bool IsSelecting { get => _isSelecting; private set => SetAndRaise(IsSelectingProperty, ref _isSelecting, value); }
-
     private Rect _selectedArea;
     public Rect SelectedArea { get => _selectedArea; private set => SetAndRaise(SelectedAreaProperty, ref _selectedArea, value); }
+    private Rect _itemsExtent;
+    public Rect ItemsExtent { get => _itemsExtent; set => SetAndRaise(ItemsExtentProperty, ref _itemsExtent, value); }
     #endregion
 
     #region Internal State
     private readonly TranslateTransform _translateTransform = new TranslateTransform();
     private readonly ScaleTransform _scaleTransform = new ScaleTransform();
     private readonly TranslateTransform _dpiTranslateTransform = new TranslateTransform();
-
     private bool _isPanning;
     private Point _panStartMousePosition;
     private Point _panStartViewportLocation;
@@ -129,13 +84,12 @@ public class DesignEditor : SelectingItemsControl
         ViewportLocationProperty.Changed.AddClassHandler<DesignEditor>((x, e) => x.UpdateTransforms());
         ViewportZoomProperty.Changed.AddClassHandler<DesignEditor>((x, e) => x.UpdateTransforms());
 
-        ItemsPanelProperty.OverrideDefaultValue<DesignEditor>(
-            new FuncTemplate<Panel?>(() => new Canvas()));
+        // Мы НЕ устанавливаем ItemsPanelProperty.OverrideDefaultValue,
+        // потому что будем задавать шаблон в XAML для биндинга Extent.
     }
 
     public DesignEditor()
     {
-        // По умолчанию включаем множественное выделение
         SelectionMode = SelectionMode.Multiple;
 
         var contentGroup = new TransformGroup();
@@ -207,7 +161,6 @@ public class DesignEditor : SelectingItemsControl
     protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
     {
         if (e.Handled) return;
-
         double prevZoom = ViewportZoom;
         double newZoom = e.Delta.Y > 0 ? prevZoom * ZoomFactor : prevZoom / ZoomFactor;
         newZoom = Math.Max(GetValue(MinZoomProperty), Math.Min(GetValue(MaxZoomProperty), newZoom));
@@ -243,16 +196,10 @@ public class DesignEditor : SelectingItemsControl
         }
         else if (props.IsLeftButtonPressed)
         {
-            // Если Ctrl не нажат - сбрасываем выделение при клике в пустоту
-            if (!e.KeyModifiers.HasFlag(KeyModifiers.Control))
-            {
-                SelectedItem = null;
-            }
-
+            if (!e.KeyModifiers.HasFlag(KeyModifiers.Control)) SelectedItem = null;
             IsSelecting = true;
             _selectionStartLocationWorld = GetWorldPosition(e.GetPosition(this));
             SelectedArea = new Rect(_selectionStartLocationWorld, new Size(0, 0));
-
             e.Pointer.Capture(this);
             e.Handled = true;
         }
@@ -276,7 +223,6 @@ public class DesignEditor : SelectingItemsControl
             double y = Math.Min(_selectionStartLocationWorld.Y, currentMousePosWorld.Y);
             double w = Math.Abs(_selectionStartLocationWorld.X - currentMousePosWorld.X);
             double h = Math.Abs(_selectionStartLocationWorld.Y - currentMousePosWorld.Y);
-
             SelectedArea = new Rect(x, y, w, h);
         }
         else
@@ -295,45 +241,28 @@ public class DesignEditor : SelectingItemsControl
         }
         else if (IsSelecting)
         {
-            // Фиксация выделения
             CommitSelection(SelectedArea, e.KeyModifiers.HasFlag(KeyModifiers.Control));
-
             IsSelecting = false;
             SelectedArea = new Rect(0, 0, 0, 0);
             e.Pointer.Capture(null);
         }
-
         base.OnPointerReleased(e);
     }
 
-    /// <summary>
-    /// Главная логика выделения рамкой
-    /// </summary>
     private void CommitSelection(Rect bounds, bool isCtrlPressed)
     {
         if (Presenter?.Panel == null) return;
 
-        // Используем BatchUpdate, чтобы не дергать события CollectionChanged на каждый элемент.
-        // Это позволяет корректно выделить несколько элементов сразу.
         using (Selection.BatchUpdate())
         {
-            // 1. Если не держим Ctrl, сначала очищаем всё
-            if (!isCtrlPressed)
-            {
-                Selection.Clear();
-            }
+            if (!isCtrlPressed) Selection.Clear();
 
-            // 2. Ищем, кто попал в рамку
             foreach (var child in Presenter.Panel.Children)
             {
                 if (child is DesignEditorItem container)
                 {
-                    // Intersects проверяет, пересекаются ли прямоугольники
                     if (bounds.Intersects(container.Bounds))
-                    {
-                        var index = IndexFromContainer(container);
-                        Selection.Select(index);
-                    }
+                        Selection.Select(IndexFromContainer(container));
                 }
             }
         }

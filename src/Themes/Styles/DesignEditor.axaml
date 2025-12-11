@@ -9,11 +9,7 @@
     <ControlTheme x:Key="SelectionRectangleStyle" TargetType="Rectangle">
         <Setter Property="Stroke" Value="#1E90FF" />
         <Setter Property="StrokeThickness" Value="1" />
-        <Setter Property="Fill">
-            <Setter.Value>
-                <SolidColorBrush Opacity="0.1" Color="#1E90FF" />
-            </Setter.Value>
-        </Setter>
+        <Setter Property="Fill"><Setter.Value><SolidColorBrush Opacity="0.1" Color="#1E90FF" /></Setter.Value></Setter>
         <Setter Property="IsHitTestVisible" Value="False"/>
     </ControlTheme>
 
@@ -21,18 +17,11 @@
         <Setter Property="Template">
             <ControlTemplate>
                 <Grid>
-                    <Border Name="SelectionBorder"
-                            BorderBrush="#1E90FF"
-                            BorderThickness="2"
-                            CornerRadius="4"
-                            IsVisible="False"
-                            Margin="-4"/> <ContentPresenter Name="PART_ContentPresenter"
-                                      Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}" />
+                    <Border Name="SelectionBorder" BorderBrush="#1E90FF" BorderThickness="2" CornerRadius="4" IsVisible="False" Margin="-4"/>
+                    <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" />
                 </Grid>
             </ControlTemplate>
         </Setter>
-
         <Style Selector="^:selected /template/ Border#SelectionBorder">
             <Setter Property="IsVisible" Value="True"/>
         </Style>
@@ -42,21 +31,15 @@
         <Setter Property="Background" Value="#1E1E1E" />
         <Setter Property="ClipToBounds" Value="True" />
         <Setter Property="SelectionRectangleStyle" Value="{StaticResource SelectionRectangleStyle}" />
-
         <Setter Property="Template">
             <ControlTemplate>
-                <Border Background="{TemplateBinding Background}"
-                        BorderBrush="{TemplateBinding BorderBrush}"
-                        BorderThickness="{TemplateBinding BorderThickness}">
-
-                    <Canvas Name="PART_ViewportCanvas"
-                            RenderTransform="{TemplateBinding ViewportTransform}"
-                            RenderTransformOrigin="0,0">
+                <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+                    <Canvas Name="PART_ViewportCanvas" RenderTransform="{TemplateBinding ViewportTransform}" RenderTransformOrigin="0,0">
 
                         <ItemsPresenter Name="PART_ItemsPresenter">
                             <ItemsPresenter.ItemsPanel>
                                 <ItemsPanelTemplate>
-                                    <Canvas />
+                                    <local:DesignPanel Extent="{Binding ItemsExtent, Mode=OneWayToSource, RelativeSource={RelativeSource AncestorType=local:DesignEditor}}" />
                                 </ItemsPanelTemplate>
                             </ItemsPresenter.ItemsPanel>
                         </ItemsPresenter>
@@ -80,7 +63,6 @@
                                 </MultiBinding>
                             </Rectangle.Height>
                         </Rectangle>
-
                     </Canvas>
                 </Border>
             </ControlTemplate>
