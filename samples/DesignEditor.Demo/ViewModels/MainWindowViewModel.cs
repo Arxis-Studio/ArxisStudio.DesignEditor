@@ -30,7 +30,7 @@ public partial class DesignItemViewModel : ObservableObject
     }
 
     // НОВОЕ: Размеры элемента (Источник правды)
-    // Инициализируем дефолтными значениями
+    // Инициализируем дефолтными значениями, чтобы окна не появлялись с size 0,0
     [ObservableProperty] private double _width = 400;
     [ObservableProperty] private double _height = 300;
 
@@ -46,7 +46,7 @@ public class LoginNodeViewModel : DesignItemViewModel
 {
     public LoginNodeViewModel(double x, double y) : base(x, y)
     {
-        // Задаем специфичные размеры по умолчанию для этого типа
+        // Можно задать специфичные размеры по умолчанию
         Width = 340;
         Height = 400;
     }
@@ -90,8 +90,7 @@ public partial class MainWindowViewModel : ObservableObject
         Nodes.Add(new LoginNodeViewModel(100, 100));
         Nodes.Add(new DashboardNodeViewModel(100, 450));
 
-        // ВАЖНО: Подписываемся на изменение коллекции выделения,
-        // чтобы обновлять свойство ActiveItem и UI реагировал мгновенно
+        // ВАЖНО: Подписываемся на изменение выделения, чтобы обновлять UI (ActiveItem)
         SelectedNodes.CollectionChanged += (s, e) =>
         {
             OnPropertyChanged(nameof(ActiveItem));

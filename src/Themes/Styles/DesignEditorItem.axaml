@@ -4,18 +4,26 @@
                     xmlns:arxisStudio="clr-namespace:ArxisStudio">
 
     <SolidColorBrush x:Key="DesignEditorItem.HighlightColor" Color="DodgerBlue" Opacity="0.2" />
+
     <ControlTheme x:Key="{x:Type arxisStudio:DesignEditorItem}" TargetType="arxisStudio:DesignEditorItem">
         <Setter Property="Background" Value="Transparent" />
-        <Setter Property="BorderBrush" Value="DodgerBlue" />
-        <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="SelectedBorderThickness" Value="1" /> <Setter Property="SelectedBrush" Value="#0099FF" /> <Setter Property="CornerRadius" Value="0" />
-        <Setter Property="Padding" Value="0" />
 
+        <Setter Property="BorderBrush" Value="DodgerBlue" />
+
+        <Setter Property="BorderThickness" Value="0" />
+
+        <Setter Property="SelectedBorderThickness" Value="1" />
+        <Setter Property="SelectedBrush" Value="#0099FF" />
+
+        <Setter Property="CornerRadius" Value="0" />
+        <Setter Property="Padding" Value="0" />
         <Setter Property="ClipToBounds" Value="False" />
+
+        <Setter Property="UseLayoutRounding" Value="True" />
 
         <Setter Property="Template">
             <ControlTemplate>
-                <Grid ClipToBounds="False">
+                <Grid ClipToBounds="False" Background="Transparent">
 
                     <Border Name="PART_Border"
                             Background="{TemplateBinding Background}"
@@ -27,6 +35,13 @@
                                           Content="{TemplateBinding Content}"
                                           ContentTemplate="{TemplateBinding ContentTemplate}" />
                     </Border>
+
+                    <Border Name="PART_HoverBorder"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="{TemplateBinding CornerRadius}"
+                            IsHitTestVisible="False"
+                            Opacity="0" />
 
                     <controls1:ResizeAdorner Name="PART_Resizer"
                                             AdornerBrush="{TemplateBinding SelectedBrush}"
@@ -42,7 +57,7 @@
                                 Spacing="2"
                                 Opacity="0"
                                 IsHitTestVisible="False">
-                         </StackPanel>
+                    </StackPanel>
 
                 </Grid>
             </ControlTemplate>
@@ -52,21 +67,20 @@
             <Setter Property="BorderBrush" Value="{Binding SelectedBrush, RelativeSource={RelativeSource Self}}" />
             <Setter Property="BorderThickness" Value="{Binding SelectedBorderThickness, RelativeSource={RelativeSource Self}}" />
             <Setter Property="Margin" Value="{Binding SelectedMargin, RelativeSource={RelativeSource Self}}" />
+
             <Setter Property="ZIndex" Value="99" />
 
             <Style Selector="^ /template/ controls1|ResizeAdorner#PART_Resizer">
                 <Setter Property="IsVisible" Value="True"/>
             </Style>
-
             <Style Selector="^ /template/ StackPanel#PART_Toolbar">
                 <Setter Property="Opacity" Value="1"/>
                 <Setter Property="IsHitTestVisible" Value="True"/>
             </Style>
         </Style>
 
-        <Style Selector="^:pointerover /template/ Border#PART_Border">
-             <Setter Property="BorderBrush" Value="{Binding SelectedBrush, RelativeSource={RelativeSource TemplatedParent}}"/>
-             <Setter Property="BorderThickness" Value="1"/>
+        <Style Selector="^:pointerover:not(:selected) /template/ Border#PART_HoverBorder">
+             <Setter Property="Opacity" Value="1"/>
         </Style>
 
     </ControlTheme>
