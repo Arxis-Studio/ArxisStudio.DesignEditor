@@ -88,12 +88,17 @@
             <arxisStudio:DesignEditor.Styles>
                 <Style Selector="arxisStudio|DesignEditorItem" x:DataType="vm:DesignItemViewModel">
                     <Setter Property="Location" Value="{Binding Location}"/>
+                    <Setter Property="Width" Value="{Binding Width, Mode=TwoWay}"/>
+                    <Setter Property="Height" Value="{Binding Height, Mode=TwoWay}"/>
                 </Style>
             </arxisStudio:DesignEditor.Styles>
 
             <arxisStudio:DesignEditor.DataTemplates>
+
                 <DataTemplate DataType="{x:Type vm:LoginNodeViewModel}">
-                    <Border Width="340" Background="#202020" BorderBrush="#383838" BorderThickness="1" CornerRadius="12" Padding="30" BoxShadow="0 10 20 0 #50000000">
+                    <Border HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                            Background="#202020" BorderBrush="#383838" BorderThickness="1"
+                            CornerRadius="12" Padding="30" BoxShadow="0 10 20 0 #50000000">
                         <StackPanel Spacing="20">
                             <TextBlock Text="Login Form" FontSize="18" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center"/>
                             <StackPanel Spacing="12">
@@ -105,10 +110,13 @@
                 </DataTemplate>
 
                 <DataTemplate DataType="{x:Type vm:DashboardNodeViewModel}">
-                    <Border Width="700" Height="500" Background="#202020" BorderBrush="#383838" BorderThickness="1" CornerRadius="12" Padding="20">
+                    <Border HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                            Background="#202020" BorderBrush="#383838" BorderThickness="1"
+                            CornerRadius="12" Padding="20">
                         <TextBlock Text="Dashboard" FontWeight="Bold" FontSize="16" Foreground="White"/>
                     </Border>
                 </DataTemplate>
+
             </arxisStudio:DesignEditor.DataTemplates>
 
         </arxisStudio:DesignEditor>
@@ -131,20 +139,54 @@
 
                 <Rectangle Width="1" Height="16" Fill="#3E4451"/>
 
-                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Opacity="0.8">
-                    <PathIcon Data="M12,2C15.31,2 18,4.66 18,7.95C18,12.41 12,19 12,19C12,19 6,12.41 6,7.95C6,4.66 8.69,2 12,2M12,6A2,2 0 0,0 10,8A2,2 0 0,0 12,10A2,2 0 0,0 14,8A2,2 0 0,0 12,6M20,19C20,21.21 16.42,23 12,23C7.58,23 4,21.21 4,19C4,17.71 5.22,16.56 7.11,15.83L7.75,16.74C6.67,17.19 6,17.81 6,18.5C6,19.88 8.69,21 12,21C15.31,21 18,19.88 18,18.5C18,17.81 17.33,17.19 16.25,16.74L16.89,15.83C18.78,16.56 20,17.71 20,19Z"
-                              Width="14" Height="14" Foreground="#999"/>
-                    <StackPanel Orientation="Horizontal" Spacing="4">
-                        <TextBlock Text="X" Foreground="#666" FontSize="10" VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding #Editor.ViewportLocation.X, StringFormat='{}{0:0}'}"
-                                   Foreground="#CCC" FontSize="12" Width="35" FontFamily="Consolas, Monospace"/>
-                        <TextBlock Text="Y" Foreground="#666" FontSize="10" VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding #Editor.ViewportLocation.Y, StringFormat='{}{0:0}'}"
-                                   Foreground="#CCC" FontSize="12" Width="35" FontFamily="Consolas, Monospace"/>
+                <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center" Opacity="0.9"
+                            IsVisible="{Binding ActiveItem, Converter={x:Static ObjectConverters.IsNotNull}}">
+
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <PathIcon Data="M12,2L16,6H13V13H20V10L24,14L20,18V15H13V22H16L12,26L8,22H11V15H4V18L0,14L4,10V13H11V6H8L12,2Z"
+                                  Width="12" Height="12" Foreground="#999" ToolTip.Tip="Position"/>
+
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <TextBlock Text="X" Foreground="#666" FontSize="10" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding ActiveItem.Location.X, StringFormat='{}{0:0}'}"
+                                       Foreground="#CCC" FontSize="12" Width="30" FontFamily="Consolas, Monospace"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <TextBlock Text="Y" Foreground="#666" FontSize="10" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding ActiveItem.Location.Y, StringFormat='{}{0:0}'}"
+                                       Foreground="#CCC" FontSize="12" Width="30" FontFamily="Consolas, Monospace"/>
+                        </StackPanel>
                     </StackPanel>
+
+                    <Rectangle Width="1" Height="10" Fill="#3E4451" Opacity="0.5"/>
+
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <PathIcon Data="M2,6V8H5V6H2M2,10V12H5V10H2M2,14V16H5V14H2M2,18V20H5V18H2M6,2V22H18V2H6M16,6V8H8V6H16M16,10V12H8V10H16M16,14V16H8V14H16M16,18V20H8V18H16M20,6V8H22V6H20M20,10V12H22V10H20M20,14V16H22V14H20M20,18V20H22V18H20Z"
+                                  Width="12" Height="12" Foreground="#999" ToolTip.Tip="Size"/>
+
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <TextBlock Text="W" Foreground="#666" FontSize="10" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding ActiveItem.Width, StringFormat='{}{0:F0}'}"
+                                       Foreground="#CCC" FontSize="12" Width="30" FontFamily="Consolas, Monospace"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Spacing="4">
+                            <TextBlock Text="H" Foreground="#666" FontSize="10" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding ActiveItem.Height, StringFormat='{}{0:F0}'}"
+                                       Foreground="#CCC" FontSize="12" Width="30" FontFamily="Consolas, Monospace"/>
+                        </StackPanel>
+                    </StackPanel>
+
                 </StackPanel>
 
                 <Rectangle Width="1" Height="16" Fill="#3E4451"/>
+
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Opacity="0.5">
+                    <TextBlock Text="Viewport:" Foreground="#666" FontSize="10" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding #Editor.ViewportLocation.X, StringFormat='{}{0:0}'}" Foreground="#999" FontSize="10"/>
+                    <TextBlock Text="{Binding #Editor.ViewportLocation.Y, StringFormat='{}{0:0}'}" Foreground="#999" FontSize="10"/>
+                </StackPanel>
 
                 <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
                     <PathIcon Data="M15.5,14L14.71,14L14.43,13.73C15.41,12.59 16,11.11 16,9.5C16,5.91 13.09,3 9.5,3C5.91,3 3,5.91 3,9.5C3,13.09 5.91,16 9.5,16C11.11,16 12.59,15.41 13.73,14.43L14,14.71L14,15.5L19,20.5L20.5,19L15.5,14M9.5,14C7.01,14 5,11.99 5,9.5C5,7.01 7.01,5 9.5,5C11.99,5 14,7.01 14,9.5C14,11.99 11.99,14 9.5,14Z"

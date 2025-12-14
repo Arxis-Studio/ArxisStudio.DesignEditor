@@ -1,7 +1,8 @@
 ﻿using System.Collections.ObjectModel;
+using System.Linq;
 using Avalonia;
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input; // ВАЖНО: Для RelayCommand
+using CommunityToolkit.Mvvm.Input;
 
 namespace DesignEditor.Demo.ViewModels;
 
@@ -24,8 +25,14 @@ public partial class DesignItemViewModel : ObservableObject
         {
             X = value.X;
             Y = value.Y;
+            OnPropertyChanged();
         }
     }
+
+    // НОВОЕ: Размеры элемента (Источник правды)
+    // Инициализируем дефолтными значениями
+    [ObservableProperty] private double _width = 400;
+    [ObservableProperty] private double _height = 300;
 
     protected DesignItemViewModel(double x, double y)
     {
@@ -34,31 +41,41 @@ public partial class DesignItemViewModel : ObservableObject
     }
 }
 
-// Модели
+// Конкретные реализации узлов
 public class LoginNodeViewModel : DesignItemViewModel
 {
-    public LoginNodeViewModel(double x, double y) : base(x, y) { }
+    public LoginNodeViewModel(double x, double y) : base(x, y)
+    {
+        // Задаем специфичные размеры по умолчанию для этого типа
+        Width = 340;
+        Height = 400;
+    }
 }
 
 public class DashboardNodeViewModel : DesignItemViewModel
 {
-    public DashboardNodeViewModel(double x, double y) : base(x, y) { }
+    public DashboardNodeViewModel(double x, double y) : base(x, y)
+    {
+        Width = 700;
+        Height = 500;
+    }
 }
 
 public partial class MainWindowViewModel : ObservableObject
 {
     public ObservableCollection<DesignItemViewModel> Nodes { get; } = new();
 
-    // СПИСОК ВЫДЕЛЕННЫХ (Avalonia работает с object, поэтому IList или ObservableCollection<object>)
+    // Коллекция выделенных элементов (Avalonia биндит сюда object)
     [ObservableProperty]
     private ObservableCollection<object> _selectedNodes = new();
 
-    // --- ZOOM ---
+    // НОВОЕ: Активный элемент (первый из выделенных) для отображения в панели свойств
+    // Вычисляемое свойство, которое обновляется при изменении SelectedNodes
+    public DesignItemViewModel? ActiveItem => SelectedNodes.FirstOrDefault() as DesignItemViewModel;
+
     [ObservableProperty]
     private double _zoom = 1.0;
 
-    // --- RESET COMMAND ---
-    // CommunityToolkit сгенерирует свойство "ResetZoomCommand"
     [RelayCommand]
     public void ResetZoom()
     {
@@ -67,9 +84,17 @@ public partial class MainWindowViewModel : ObservableObject
 
     public MainWindowViewModel()
     {
+        // Заполняем демо-данными
         Nodes.Add(new LoginNodeViewModel(400, 300));
         Nodes.Add(new DashboardNodeViewModel(800, 300));
         Nodes.Add(new LoginNodeViewModel(100, 100));
         Nodes.Add(new DashboardNodeViewModel(100, 450));
+
+        // ВАЖНО: Подписываемся на изменение коллекции выделения,
+        // чтобы обновлять свойство ActiveItem и UI реагировал мгновенно
+        SelectedNodes.CollectionChanged += (s, e) =>
+        {
+            OnPropertyChanged(nameof(ActiveItem));
+        };
     }
 }

@@ -18,6 +18,7 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceInclude Source="avares://ArxisStudio.DesignEditor/Themes/Styles/DesignEditor.axaml" />
                 <ResourceInclude Source="avares://ArxisStudio.DesignEditor/Themes/Styles/DesignEditorItem.axaml" />
+                <ResourceInclude Source="avares://ArxisStudio.DesignEditor/Themes/Styles/ResizeAdorner.axaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
 
