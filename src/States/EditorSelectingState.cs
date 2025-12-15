@@ -1,0 +1,59 @@
+﻿using System;
+using Avalonia;
+using Avalonia.Input;
+
+namespace ArxisStudio.States;
+
+public class EditorSelectingState : EditorState
+{
+    private Point _startLocationWorld;
+
+    public EditorSelectingState(DesignEditor editor) : base(editor) { }
+
+    public override void Enter(EditorState? from)
+    {
+        // 1. Включаем режим отрисовки рамки в Editor
+        Editor.IsSelecting = true;
+
+        // 2. Запоминаем точку старта в МИРОВЫХ координатах (с учетом зума и пана)
+        _startLocationWorld = Editor.GetWorldPosition(Editor.GetPositionForInput(Editor));
+
+        // 3. Сбрасываем текущее выделение, если не нажат Ctrl
+        // (Для полной поддержки Shift/Append можно добавить логику здесь, но пока Ctrl)
+        var modifiers = Editor.LastInputModifiers; // Нужно будет добавить свойство или передавать аргументы в Enter
+        if (!modifiers.HasFlag(KeyModifiers.Control))
+        {
+            Editor.SelectedItem = null; // Сброс одиночного выделения
+            Editor.Selection.Clear();   // Сброс множественного
+        }
+
+        Editor.SelectedArea = new Rect(_startLocationWorld, new Size(0, 0));
+    }
+
+    public override void Exit()
+    {
+        Editor.IsSelecting = false;
+        Editor.SelectedArea = new Rect(0, 0, 0, 0);
+    }
+
+    public override void OnPointerMoved(PointerEventArgs e)
+    {
+        Point currentMousePosWorld = Editor.GetWorldPosition(e.GetPosition(Editor));
+
+        double x = Math.Min(_startLocationWorld.X, currentMousePosWorld.X);
+        double y = Math.Min(_startLocationWorld.Y, currentMousePosWorld.Y);
+        double w = Math.Abs(_startLocationWorld.X - currentMousePosWorld.X);
+        double h = Math.Abs(_startLocationWorld.Y - currentMousePosWorld.Y);
+
+        Editor.SelectedArea = new Rect(x, y, w, h);
+    }
+
+    public override void OnPointerReleased(PointerReleasedEventArgs e)
+    {
+        // Применяем выделение
+        Editor.CommitSelection(Editor.SelectedArea, e.KeyModifiers.HasFlag(KeyModifiers.Control));
+
+        // Возвращаемся в Idle
+        Editor.PopState();
+    }
+}
