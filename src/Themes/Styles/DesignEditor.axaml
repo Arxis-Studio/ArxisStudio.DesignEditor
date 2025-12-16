@@ -1,6 +1,7 @@
 ﻿<ResourceDictionary xmlns="https://github.com/avaloniaui"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:local="clr-namespace:ArxisStudio"
+                    xmlns:controls="clr-namespace:ArxisStudio.Controls"
                     xmlns:helpers="clr-namespace:ArxisStudio.Helpers">
 
     <helpers:UnscaleTransformConverter x:Key="UnscaleTransformConverter" />
@@ -9,11 +10,7 @@
     <ControlTheme x:Key="SelectionRectangleStyle" TargetType="Rectangle">
         <Setter Property="Stroke" Value="#1E90FF" />
         <Setter Property="StrokeThickness" Value="1" />
-        <Setter Property="Fill">
-            <Setter.Value>
-                <SolidColorBrush Opacity="0.1" Color="#1E90FF" />
-            </Setter.Value>
-        </Setter>
+        <Setter Property="Fill" Value="#1A1E90FF" />
         <Setter Property="IsHitTestVisible" Value="False"/>
     </ControlTheme>
 
@@ -34,7 +31,7 @@
                         <ItemsPresenter Name="PART_ItemsPresenter">
                             <ItemsPresenter.ItemsPanel>
                                 <ItemsPanelTemplate>
-                                    <local:DesignPanel Extent="{Binding ItemsExtent, Mode=OneWayToSource, RelativeSource={RelativeSource AncestorType=local:DesignEditor}}" />
+                                    <controls:DesignSurface Extent="{Binding ItemsExtent, Mode=OneWayToSource, RelativeSource={RelativeSource AncestorType=local:DesignEditor}}" />
                                 </ItemsPanelTemplate>
                             </ItemsPresenter.ItemsPanel>
                         </ItemsPresenter>
@@ -63,5 +60,4 @@
             </ControlTemplate>
         </Setter>
     </ControlTheme>
-
 </ResourceDictionary>

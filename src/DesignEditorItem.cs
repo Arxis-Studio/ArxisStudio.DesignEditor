@@ -1,4 +1,5 @@
-﻿
+﻿using System;
+using System.Collections.Generic;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Metadata;
@@ -10,15 +11,20 @@ using Avalonia.Media;
 using Avalonia.VisualTree;
 using ArxisStudio.States;
 using ArxisStudio.Controls;
+using ArxisStudio.Attached;
 
 namespace ArxisStudio;
 
 /// <summary>
 /// Контейнер для элемента дизайнера.
-/// Поддерживает перетаскивание, выделение, изменение размеров и виртуализацию координат.
+/// <para>
+/// Поддерживает перетаскивание, выделение, изменение размеров и синхронизацию
+/// свойства Location с системой Layout.
+/// </para>
 /// </summary>
 [TemplatePart("PART_Border", typeof(Border))]
 [TemplatePart("PART_Resizer", typeof(ResizeAdorner))]
+[PseudoClasses(":selected", ":dragging", ":resizing")]
 public class DesignEditorItem : ContentControl, ISelectable, IDesignEditorItem
 {
     #region Fields
@@ -26,7 +32,7 @@ public class DesignEditorItem : ContentControl, ISelectable, IDesignEditorItem
     private readonly Stack<DesignEditorItemState> _states = new();
     #endregion
 
-    #region Standard Properties
+    #region Properties
 
     public static readonly StyledProperty<bool> IsSelectedProperty =
         SelectingItemsControl.IsSelectedProperty.AddOwner<DesignEditorItem>();
@@ -40,6 +46,10 @@ public class DesignEditorItem : ContentControl, ISelectable, IDesignEditorItem
     public static readonly StyledProperty<Point> LocationProperty =
         AvaloniaProperty.Register<DesignEditorItem, Point>(nameof(Location));
 
+    /// <summary>
+    /// Логическая позиция элемента.
+    /// При изменении обновляет <see cref="Layout.XProperty"/> и <see cref="Layout.YProperty"/>.
+    /// </summary>
     public Point Location
     {
         get => GetValue(LocationProperty);
@@ -54,10 +64,6 @@ public class DesignEditorItem : ContentControl, ISelectable, IDesignEditorItem
         get => GetValue(IsDraggableProperty);
         set => SetValue(IsDraggableProperty, value);
     }
-
-    #endregion
-
-    #region Visual Properties
 
     public static readonly StyledProperty<IBrush> SelectedBrushProperty =
         AvaloniaProperty.Register<DesignEditorItem, IBrush>(nameof(SelectedBrush), Brushes.Orange);
@@ -90,78 +96,40 @@ public class DesignEditorItem : ContentControl, ISelectable, IDesignEditorItem
 
     #endregion
 
-    #region Routed Events (Drag)
+    #region Events
 
     public static readonly RoutedEvent<DragStartedEventArgs> DragStartedEvent =
         RoutedEvent.Register<DragStartedEventArgs>(nameof(DragStarted), RoutingStrategies.Bubble, typeof(DesignEditorItem));
-
     public static readonly RoutedEvent<DragDeltaEventArgs> DragDeltaEvent =
         RoutedEvent.Register<DragDeltaEventArgs>(nameof(DragDelta), RoutingStrategies.Bubble, typeof(DesignEditorItem));
-
     public static readonly RoutedEvent<DragCompletedEventArgs> DragCompletedEvent =
         RoutedEvent.Register<DragCompletedEventArgs>(nameof(DragCompleted), RoutingStrategies.Bubble, typeof(DesignEditorItem));
 
-    public event EventHandler<DragStartedEventArgs> DragStarted
-    {
-        add => AddHandler(DragStartedEvent, value);
-        remove => RemoveHandler(DragStartedEvent, value);
-    }
-
-    public event EventHandler<DragDeltaEventArgs> DragDelta
-    {
-        add => AddHandler(DragDeltaEvent, value);
-        remove => RemoveHandler(DragDeltaEvent, value);
-    }
-
-    public event EventHandler<DragCompletedEventArgs> DragCompleted
-    {
-        add => AddHandler(DragCompletedEvent, value);
-        remove => RemoveHandler(DragCompletedEvent, value);
-    }
-
-    #endregion
-
-    #region Routed Events (Resize)
-
     public static readonly RoutedEvent<ResizeDeltaEventArgs> ResizeDeltaEvent =
         RoutedEvent.Register<ResizeDeltaEventArgs>(nameof(ResizeDelta), RoutingStrategies.Bubble, typeof(DesignEditorItem));
-
     public static readonly RoutedEvent<VectorEventArgs> ResizeStartedEvent =
         RoutedEvent.Register<VectorEventArgs>(nameof(ResizeStarted), RoutingStrategies.Bubble, typeof(DesignEditorItem));
-
     public static readonly RoutedEvent<VectorEventArgs> ResizeCompletedEvent =
         RoutedEvent.Register<VectorEventArgs>(nameof(ResizeCompleted), RoutingStrategies.Bubble, typeof(DesignEditorItem));
 
-    public event EventHandler<ResizeDeltaEventArgs> ResizeDelta
-    {
-        add => AddHandler(ResizeDeltaEvent, value);
-        remove => RemoveHandler(ResizeDeltaEvent, value);
-    }
-
-    public event EventHandler<VectorEventArgs> ResizeStarted
-    {
-        add => AddHandler(ResizeStartedEvent, value);
-        remove => RemoveHandler(ResizeStartedEvent, value);
-    }
-
-    public event EventHandler<VectorEventArgs> ResizeCompleted
-    {
-        add => AddHandler(ResizeCompletedEvent, value);
-        remove => RemoveHandler(ResizeCompletedEvent, value);
-    }
+    public event EventHandler<DragStartedEventArgs> DragStarted { add => AddHandler(DragStartedEvent, value); remove => RemoveHandler(DragStartedEvent, value); }
+    public event EventHandler<DragDeltaEventArgs> DragDelta { add => AddHandler(DragDeltaEvent, value); remove => RemoveHandler(DragDeltaEvent, value); }
+    public event EventHandler<DragCompletedEventArgs> DragCompleted { add => AddHandler(DragCompletedEvent, value); remove => RemoveHandler(DragCompletedEvent, value); }
+    public event EventHandler<ResizeDeltaEventArgs> ResizeDelta { add => AddHandler(ResizeDeltaEvent, value); remove => RemoveHandler(ResizeDeltaEvent, value); }
+    public event EventHandler<VectorEventArgs> ResizeStarted { add => AddHandler(ResizeStartedEvent, value); remove => RemoveHandler(ResizeStartedEvent, value); }
+    public event EventHandler<VectorEventArgs> ResizeCompleted { add => AddHandler(ResizeCompletedEvent, value); remove => RemoveHandler(ResizeCompletedEvent, value); }
 
     #endregion
 
+    /// <summary>
+    /// Текущее состояние машины состояний.
+    /// </summary>
     public DesignEditorItemState CurrentState => _states.Count > 0 ? _states.Peek() : null!;
 
     static DesignEditorItem()
     {
         SelectableMixin.Attach<DesignEditorItem>(IsSelectedProperty);
         FocusableProperty.OverrideDefaultValue<DesignEditorItem>(true);
-        LocationProperty.Changed.AddClassHandler<DesignEditorItem>((item, args) =>
-        {
-            if (item.GetVisualParent() is Panel panel) panel.InvalidateArrange();
-        });
     }
 
     public DesignEditorItem()
@@ -169,6 +137,7 @@ public class DesignEditorItem : ContentControl, ISelectable, IDesignEditorItem
         _states.Push(new ItemIdleState(this));
     }
 
+    /// <inheritdoc />
     protected override void OnApplyTemplate(TemplateAppliedEventArgs e)
     {
         base.OnApplyTemplate(e);
@@ -190,23 +159,40 @@ public class DesignEditorItem : ContentControl, ISelectable, IDesignEditorItem
         }
     }
 
+    /// <inheritdoc />
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
+
         if (change.Property == BorderThicknessProperty ||
             change.Property == SelectedBorderThicknessProperty)
         {
             RaisePropertyChanged(SelectedMarginProperty, default, SelectedMargin);
         }
+        else if (change.Property == IsSelectedProperty)
+        {
+            UpdatePseudoClasses();
+        }
+        else if (change.Property == LocationProperty)
+        {
+            Layout.SetX(this, Location.X);
+            Layout.SetY(this, Location.Y);
+        }
     }
 
-    #region State Machine Management
+    private void UpdatePseudoClasses()
+    {
+        PseudoClasses.Set(":selected", IsSelected);
+    }
+
+    #region State Machine
 
     public void PushState(DesignEditorItemState state)
     {
         var previous = CurrentState;
         _states.Push(state);
         state.Enter(previous);
+        UpdatePseudoClassesState(state);
     }
 
     public void PopState()
@@ -216,63 +202,30 @@ public class DesignEditorItem : ContentControl, ISelectable, IDesignEditorItem
             var current = _states.Pop();
             current.Exit();
             CurrentState.ReEnter(current);
+            UpdatePseudoClassesState(CurrentState);
         }
     }
 
-    #endregion
-
-    #region Event Handlers
-
-    protected override void OnPointerPressed(PointerPressedEventArgs e)
+    private void UpdatePseudoClassesState(DesignEditorItemState state)
     {
-        base.OnPointerPressed(e);
-        if (!e.Handled) CurrentState.OnPointerPressed(e);
-    }
-
-    protected override void OnPointerMoved(PointerEventArgs e)
-    {
-        base.OnPointerMoved(e);
-        CurrentState.OnPointerMoved(e);
-    }
-
-    protected override void OnPointerReleased(PointerReleasedEventArgs e)
-    {
-        base.OnPointerReleased(e);
-        CurrentState.OnPointerReleased(e);
-    }
-
-    protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e)
-    {
-        base.OnPointerCaptureLost(e);
-        while (_states.Count > 1) PopState();
+        PseudoClasses.Set(":dragging", state is ItemDraggingState);
+        PseudoClasses.Set(":resizing", state is ItemResizingState);
     }
 
     #endregion
 
-    #region Adorner Handlers
+    // Обработчики ввода
+    protected override void OnPointerPressed(PointerPressedEventArgs e) { base.OnPointerPressed(e); if (!e.Handled) CurrentState.OnPointerPressed(e); }
+    protected override void OnPointerMoved(PointerEventArgs e) { base.OnPointerMoved(e); CurrentState.OnPointerMoved(e); }
+    protected override void OnPointerReleased(PointerReleasedEventArgs e) { base.OnPointerReleased(e); CurrentState.OnPointerReleased(e); }
+    protected override void OnPointerCaptureLost(PointerCaptureLostEventArgs e) { base.OnPointerCaptureLost(e); while (_states.Count > 1) PopState(); }
 
-    private void OnAdornerResizeStarted(object? sender, ResizeStartedEventArgs e)
-    {
-        // Переключаемся в состояние ресайза
-        PushState(new ItemResizingState(this, e.Direction));
+    // Обработчики адорнера
+    private void OnAdornerResizeStarted(object? sender, ResizeStartedEventArgs e) { PushState(new ItemResizingState(this, e.Direction)); RaiseEvent(new VectorEventArgs { RoutedEvent = ResizeStartedEvent, Vector = e.Vector }); e.Handled = true; }
+    private void OnAdornerResizeDelta(object? sender, ResizeDeltaEventArgs e) { CurrentState.OnResizeDelta(e); e.Handled = true; }
+    private void OnAdornerResizeCompleted(object? sender, VectorEventArgs e) { PopState(); RaiseEvent(new VectorEventArgs { RoutedEvent = ResizeCompletedEvent, Vector = e.Vector }); e.Handled = true; }
 
-        RaiseEvent(new VectorEventArgs { RoutedEvent = ResizeStartedEvent, Vector = e.Vector });
-        e.Handled = true;
-    }
-
-    private void OnAdornerResizeDelta(object? sender, ResizeDeltaEventArgs e)
-    {
-        // Делегируем логику состоянию
-        CurrentState.OnResizeDelta(e);
-        e.Handled = true;
-    }
-
-    private void OnAdornerResizeCompleted(object? sender, VectorEventArgs e)
-    {
-        PopState();
-        RaiseEvent(new VectorEventArgs { RoutedEvent = ResizeCompletedEvent, Vector = e.Vector });
-        e.Handled = true;
-    }
-
-    #endregion
+    internal void OnDragStarted(DragStartedEventArgs e) => RaiseEvent(e);
+    internal void OnDragDelta(DragDeltaEventArgs e) => RaiseEvent(e);
+    internal void OnDragCompleted(DragCompletedEventArgs e) => RaiseEvent(e);
 }
