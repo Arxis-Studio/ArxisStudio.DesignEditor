@@ -1,29 +1,16 @@
 ﻿using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Layout;
 using ArxisStudio.Attached;
 using Avalonia.VisualTree;
 
 namespace ArxisStudio.Controls;
 
-/// <summary>
-/// Панель для абсолютного позиционирования дочерних элементов.
-/// <para>
-/// Размещает элементы согласно присоединенным свойствам <see cref="Layout.XProperty"/> и <see cref="Layout.YProperty"/>.
-/// Используется как базовый контейнер для построения пользовательских интерфейсов в редакторе.
-/// </para>
-/// </summary>
 public class AbsolutePanel : Panel
 {
-    /// <summary>
-    /// Определяет свойство <see cref="Extent"/>.
-    /// </summary>
     public static readonly StyledProperty<Rect> ExtentProperty =
         AvaloniaProperty.Register<AbsolutePanel, Rect>(nameof(Extent));
 
-    /// <summary>
-    /// Получает прямоугольник, охватывающий все дочерние элементы.
-    /// Используется родительскими элементами (например, DesignEditor) для вычисления области прокрутки.
-    /// </summary>
     public Rect Extent
     {
         get => GetValue(ExtentProperty);
@@ -32,15 +19,10 @@ public class AbsolutePanel : Panel
 
     static AbsolutePanel()
     {
-        // Подписываемся на изменения координат Layout.X/Y у дочерних элементов,
-        // чтобы вызвать пересчет макета (InvalidateLayout) данной панели.
         Layout.XProperty.Changed.AddClassHandler<Control>((s, e) => InvalidateParentLayout(s));
         Layout.YProperty.Changed.AddClassHandler<Control>((s, e) => InvalidateParentLayout(s));
     }
 
-    /// <summary>
-    /// Вызывает перерисовку панели, если измененный элемент находится внутри AbsolutePanel.
-    /// </summary>
     private static void InvalidateParentLayout(Control control)
     {
         if (control.GetVisualParent() is AbsolutePanel panel)
@@ -50,7 +32,6 @@ public class AbsolutePanel : Panel
         }
     }
 
-    /// <inheritdoc />
     protected override Size MeasureOverride(Size availableSize)
     {
         var infinite = new Size(double.PositiveInfinity, double.PositiveInfinity);
@@ -60,13 +41,11 @@ public class AbsolutePanel : Panel
 
         foreach (var child in Children)
         {
-            // Измеряем ребенка, предоставляя ему неограниченное пространство
             child.Measure(infinite);
 
             double x = Layout.GetX(child);
             double y = Layout.GetY(child);
 
-            // Если координаты не заданы (NaN), считаем их равными 0 для расчета границ
             double effectiveX = double.IsNaN(x) ? 0 : x;
             double effectiveY = double.IsNaN(y) ? 0 : y;
 
@@ -82,29 +61,80 @@ public class AbsolutePanel : Panel
             }
         }
 
-        // Вычисляем область, занимаемую элементами
         var extent = hasItems ? new Rect(minX, minY, maxX - minX, maxY - minY) : new Rect();
         SetCurrentValue(ExtentProperty, extent);
 
-        // ВАЖНО: Возвращаем реальный размер содержимого.
-        // Это необходимо для корректной работы HitTest (выделения мышью) в родительском ItemsPresenter.
         return new Size(maxX, maxY);
     }
 
-    /// <inheritdoc />
     protected override Size ArrangeOverride(Size finalSize)
     {
         foreach (var child in Children)
         {
+            // ВАЖНО: Принудительно включаем слежение за глобальными координатами для каждого ребенка.
+            // Это чинит проблему, когда DesignX/Y не обновлялись для элементов без явных Layout.X/Y.
+            Layout.Track(child);
+
             double x = Layout.GetX(child);
             double y = Layout.GetY(child);
 
-            // Если координаты не заданы, размещаем в точке (0,0)
-            double finalX = double.IsNaN(x) ? 0 : x;
-            double finalY = double.IsNaN(y) ? 0 : y;
+            // Расчет X
+            double finalX = 0;
+            double finalW = child.DesiredSize.Width;
 
-            // Размещаем элемент точно по заданным координатам без использования Margin
-            child.Arrange(new Rect(new Point(finalX, finalY), child.DesiredSize));
+            if (!double.IsNaN(x))
+            {
+                finalX = x;
+            }
+            else
+            {
+                switch (child.HorizontalAlignment)
+                {
+                    case HorizontalAlignment.Center:
+                        finalX = (finalSize.Width - child.DesiredSize.Width) / 2;
+                        break;
+                    case HorizontalAlignment.Right:
+                        finalX = finalSize.Width - child.DesiredSize.Width;
+                        break;
+                    case HorizontalAlignment.Stretch:
+                        finalX = 0;
+                        finalW = finalSize.Width;
+                        break;
+                    default: // Left
+                        finalX = 0;
+                        break;
+                }
+            }
+
+            // Расчет Y
+            double finalY = 0;
+            double finalH = child.DesiredSize.Height;
+
+            if (!double.IsNaN(y))
+            {
+                finalY = y;
+            }
+            else
+            {
+                switch (child.VerticalAlignment)
+                {
+                    case VerticalAlignment.Center:
+                        finalY = (finalSize.Height - child.DesiredSize.Height) / 2;
+                        break;
+                    case VerticalAlignment.Bottom:
+                        finalY = finalSize.Height - child.DesiredSize.Height;
+                        break;
+                    case VerticalAlignment.Stretch:
+                        finalY = 0;
+                        finalH = finalSize.Height;
+                        break;
+                    default: // Top
+                        finalY = 0;
+                        break;
+                }
+            }
+
+            child.Arrange(new Rect(finalX, finalY, finalW, finalH));
         }
         return finalSize;
     }

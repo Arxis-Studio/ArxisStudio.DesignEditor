@@ -121,11 +121,11 @@
 
                                 <TextBlock
                                     Name="TextBlock1"
-                                    attached:Layout.X="0"
-                                    attached:Layout.Y="10"
                                     Text="Dashboard"
                                     FontWeight="Bold"
                                     FontSize="16"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Bottom"
                                     Foreground="White" />
 
                                 <StackPanel
@@ -136,9 +136,9 @@
                                     Margin="0,10,0,0"
                                     Opacity="0.5">
                                     <TextBlock Text="X:" Foreground="#CCC"/>
-                                    <TextBlock Text="{Binding ElementName=TextBlock1, Path=(attached:Layout.DesignX), StringFormat='{}{0:0}'}" Foreground="White"/>
+                                    <TextBlock Text="{Binding ElementName=TextBlock1, Path=(attached:Layout.X), StringFormat='{}{0:0}'}" Foreground="White"/>
                                     <TextBlock Text="Y:" Foreground="#CCC"/>
-                                    <TextBlock Text="{Binding ElementName=TextBlock1, Path=(attached:Layout.DesignX), StringFormat='{}{0:0}'}" Foreground="White"/>
+                                    <TextBlock Text="{Binding ElementName=TextBlock1, Path=(attached:Layout.Y), StringFormat='{}{0:0}'}" Foreground="White"/>
                                 </StackPanel>
 
                             </controls:AbsolutePanel>
